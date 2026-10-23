@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quizbench Starter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a workbench — live components on top (quiz wide, flashcards beside), parts tray and data format below */
+:root {
+  --bg: #F1F4F6;
+  --surface: #FFFFFF;
+  --ink: #15202A;
+  --muted: #5A6774;
+  --line: #D7DEE4;
+  --accent: #E3A400;
+  --accent-ink: #7A5700;
+  --on-accent: #1B1400;
+  --good: #1D8558;
+  --good-bg: #E3F4EB;
+  --bad: #BF3E37;
+  --bad-bg: #FBE9E7;
+  --code-bg: #1A242E;
+  --code-fg: #DCE4EB;
+
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F151B; --surface: #17212A; --ink: #E6ECF1; --muted: #92A0AD; --line: #283440;
+    --accent: #F2B829; --accent-ink: #F2B829; --on-accent: #1B1400;
+    --good: #52C690; --good-bg: #143327; --bad: #F07A72; --bad-bg: #3A1D1B;
+    --code-bg: #0A1015; --code-fg: #DCE4EB;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F151B; --surface: #17212A; --ink: #E6ECF1; --muted: #92A0AD; --line: #283440;
+  --accent: #F2B829; --accent-ink: #F2B829; --on-accent: #1B1400;
+  --good: #52C690; --good-bg: #143327; --bad: #F07A72; --bad-bg: #3A1D1B;
+  --code-bg: #0A1015; --code-fg: #DCE4EB;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 64px;
+  display: grid;
+  gap: 40px;
+}
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+.label {
+  font-family: var(--f-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+header { display: grid; gap: 12px; max-width: 68ch; }
+header .lede { color: var(--muted); font-size: 1.05rem; }
+.mark { background: linear-gradient(transparent 58%, color-mix(in srgb, var(--accent) 45%, transparent) 58%); padding: 0 2px; }
+
+/* Bench grid */
+.bench { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  font: 700 0.95rem/1 var(--f-body);
+  border-radius: 8px;
+  padding: 12px 18px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform .08s ease, background .15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 85%, var(--ink)); }
+.btn-secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--muted); }
+.btn-ghost { background: transparent; color: var(--accent-ink); padding-inline: 6px; }
+.btn-ghost:hover { text-decoration: underline; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Progress */
+.progress { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .3s ease; }
+
+/* Quiz */
+.q-meta { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.q-text { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.2rem, 2.4vw, 1.5rem); line-height: 1.25; text-wrap: balance; }
+.choices { display: grid; gap: 10px; }
+.choice {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
+  font: 400 1rem/1.4 var(--f-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.choice:hover:not([disabled]) { border-color: var(--accent); }
+.choice .key {
+  font: 600 0.8rem/1 var(--f-mono);
+  width: 2rem; height: 2rem;
+  display: grid; place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+}
+.choice .verdict { font: 600 0.75rem/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; }
+.choice[disabled] { cursor: default; }
+.choice.is-correct { border-color: var(--good); background: var(--good-bg); }
+.choice.is-correct .verdict, .choice.is-correct .key { color: var(--good); border-color: var(--good); }
+.choice.is-wrong { border-color: var(--bad); background: var(--bad-bg); }
+.choice.is-wrong .verdict, .choice.is-wrong .key { color: var(--bad); border-color: var(--bad); }
+.choice.is-dim { opacity: .55; }
+.explain { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); }
+.explain strong { color: var(--ink); }
+.hint { color: var(--muted); font-size: .85rem; }
+kbd { font: 600 .75rem/1 var(--f-mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; }
+
+.result { display: grid; gap: 18px; }
+.score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.score b { font: 800 3.5rem/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.score span { color: var(--muted); font-size: 1.1rem; }
+.review { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.review li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; font-size: .95rem; }
+
+/* Chips */
+.chip { font: 600 .72rem/1 var(--f-mono); letter-spacing: .05em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip-good { color: var(--good); border-color: var(--good); background: var(--good-bg); }
+.chip-bad { color: var(--bad); border-color: var(--bad); background: var(--bad-bg); }
+.chip-accent { color: var(--on-accent); border-color: var(--accent); background: var(--accent); }
+
+/* Flashcards */
+.card-stage { perspective: 1000px; }
+.flash {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  border: 0; padding: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit;
+  transform-style: preserve-3d;
+  transition: transform .45s cubic-bezier(.2,.7,.2,1);
+}
+.flash.is-flipped { transform: rotateY(180deg); }
+.face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  border-radius: var(--r);
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  display: grid; align-content: center; justify-items: center;
+  gap: 10px; padding: 20px; text-align: center;
+}
+.face.back { transform: rotateY(180deg); background: var(--surface); border-color: var(--accent); }
+.face .term { font: 800 1.6rem/1.15 var(--f-display); text-wrap: balance; }
+.face .def { font-size: 1rem; max-width: 34ch; }
+.fc-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-variant-numeric: tabular-nums; }
+
+/* Parts tray */
+.tray { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 860px) { .tray { grid-template-columns: minmax(0, 1fr); } }
+.part { border: 1px dashed var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.field { display: grid; gap: 6px; }
+.field input {
+  font: 400 1rem/1.3 var(--f-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: 100%;
+}
+.field input:focus { border-color: var(--accent); outline: none; }
+
+/* Code */
+.code-wrap { position: relative; min-width: 0; }
+pre {
+  margin: 0;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: var(--r);
+  padding: 20px;
+  overflow-x: auto;
+  font: 400 .85rem/1.6 var(--f-mono);
+}
+.code-wrap .btn { position: absolute; top: 10px; right: 10px; padding: 8px 12px; font-size: .8rem; }
+.tok-k { color: #F2B829; } .tok-s { color: #8FD3A8; } .tok-c { color: #7F8E9B; }
+
+.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 68ch; }
+footer { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body style="margin:0">
+
+<div class="wrap">
+  <header>
+    <span class="label">Starter kit · v1</span>
+    <h1>Quizbench <span class="mark">Starter</span></h1>
+    <p class="lede">A working quiz and a flashcard deck you can copy, rename and fill with your own questions. Both run from a plain JavaScript list, so changing the content never means touching the layout. The questions below are sample content about the solar system.</p>
+  </header>
+
+  <section class="bench" aria-label="Live components">
+    <article class="panel" id="quiz" aria-live="polite"></article>
+
+    <article class="panel" id="flashcards">
+      <div class="panel-head">
+        <h2>Flashcards</h2>
+        <span class="label" id="fc-count">1 / 5</span>
+      </div>
+      <div class="card-stage">
+        <button class="flash" id="fc-card" type="button" aria-label="Flip card">
+          <span class="face front"><span class="label">Term</span><span class="term" id="fc-term"></span><span class="hint">Tap or press Space to flip</span></span>
+          <span class="face back"><span class="label">Meaning</span><span class="def" id="fc-def"></span></span>
+        </button>
+      </div>
+      <div class="fc-nav">
+        <button class="btn btn-secondary" id="fc-prev" type="button">← Prev</button>
+        <button class="btn btn-ghost" id="fc-shuffle" type="button">Shuffle</button>
+        <button class="btn btn-secondary" id="fc-next" type="button">Next →</button>
+      </div>
+    </article>
+  </section>
+
+  <section class="panel" aria-labelledby="parts-h">
+    <div class="panel-head">
+      <h2 id="parts-h">Parts tray</h2>
+      <span class="label">Reusable pieces</span>
+    </div>
+    <div class="tray">
+      <div class="part">
+        <span class="label">Buttons</span>
+        <div class="row">
+          <button class="btn btn-primary" type="button">Check answer</button>
+          <button class="btn btn-secondary" type="button">Skip</button>
+          <button class="btn btn-ghost" type="button">Show hint</button>
+        </div>
+      </div>
+      <div class="part">
+        <span class="label">Answer states</span>
+        <div class="row">
+          <span class="chip">Unanswered</span>
+          <span class="chip chip-good">Correct</span>
+          <span class="chip chip-bad">Wrong</span>
+          <span class="chip chip-accent">New best</span>
+        </div>
+        <div class="progress" role="progressbar" aria-label="Example progress" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"><span style="width:60%"></span></div>
+      </div>
+      <div class="part">
+        <span class="label">Short answer field</span>
+        <form class="field" id="sa-form">
+          <label for="sa-input">Closest star to the Sun?</label>
+          <div class="row">
+            <input id="sa-input" type="text" placeholder="Type your answer" autocomplete="off" style="flex:1 1 140px">
+            <button class="btn btn-primary" type="submit">Check</button>
+          </div>
+          <span class="hint" id="sa-out">Answer: Proxima Centauri</span>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="data-h">
+    <div class="panel-head">
+      <h2 id="data-h">Add your own questions</h2>
+      <span class="label">Edit one list</span>
+    </div>
+    <ol class="steps">
+      <li>Find the <code>QUIZ</code> list in the page's script.</li>
+      <li>Replace each entry with your question, choices, the index of the right choice (counting from 0), and a one-line explanation.</li>
+      <li>Do the same for <code>CARDS</code>. Any number of questions or cards works.</li>
+    </ol>
+    <div class="code-wrap">
+      <button class="btn btn-secondary" id="copy-btn" type="button">Copy</button>
+<pre id="code-sample"><span class="tok-k">const</span> QUIZ = {
+  title: <span class="tok-s">"Solar System Check"</span>,
+  shuffle: <span class="tok-k">false</span>,          <span class="tok-c">// true = random question order</span>
+  questions: [
+    {
+      q: <span class="tok-s">"Which planet has the shortest year?"</span>,
+      choices: [<span class="tok-s">"Venus"</span>, <span class="tok-s">"Mercury"</span>, <span class="tok-s">"Mars"</span>, <span class="tok-s">"Earth"</span>],
+      answer: 1,             <span class="tok-c">// index into choices</span>
+      explain: <span class="tok-s">"Mercury circles the Sun in about 88 Earth days."</span>
+    }
+  ]
+};
+
+<span class="tok-k">const</span> CARDS = [
+  { term: <span class="tok-s">"Astronomical unit"</span>, def: <span class="tok-s">"About 149.6 million km ..."</span> }
+];</pre>
+    </div>
+  </section>
+
+  <footer>Sample facts from NASA's public planetary fact sheets. Your best quiz score is saved in this browser only.</footer>
+</div>
+
+<script>
+/* ---------- Content: edit these two lists ---------- */
+const QUIZ = {
+  title: "Solar System Check",
+  shuffle: false,
+  questions: [
+    { q: "Which planet has the shortest year?",
+      choices: ["Venus", "Mercury", "Mars", "Earth"], answer: 1,
+      explain: "Mercury circles the Sun in about 88 Earth days." },
+    { q: "Which planet is the hottest at its surface?",
+      choices: ["Mercury", "Jupiter", "Venus", "Mars"], answer: 2,
+      explain: "Venus averages about 465 °C. Its thick CO₂ atmosphere traps heat, so it beats Mercury despite being farther out." },
+    { q: "Roughly how long does sunlight take to reach Earth?",
+      choices: ["8 seconds", "8 minutes", "8 hours", "1 day"], answer: 1,
+      explain: "About 8 minutes 20 seconds, crossing roughly 150 million km." },
+    { q: "Which planet spins on its side, tilted about 98°?",
+      choices: ["Uranus", "Neptune", "Saturn", "Venus"], answer: 0,
+      explain: "Uranus rolls around the Sun on its side, likely after an ancient collision." },
+    { q: "Where is Olympus Mons, the tallest volcano known in the solar system?",
+      choices: ["Venus", "Io", "Earth", "Mars"], answer: 3,
+      explain: "Olympus Mons on Mars rises about 22 km, roughly two and a half times the height of Everest." }
+  ]
+};
+
+const CARDS = [
+  { term: "Astronomical unit (AU)", def: "The average Earth–Sun distance, about 149.6 million km. Used to measure distances inside the solar system." },
+  { term: "Light-year", def: "The distance light travels in one year, about 9.46 trillion km. A unit of distance, not time." },
+  { term: "Kuiper Belt", def: "A ring of icy bodies beyond Neptune, from about 30 to 50 AU. Pluto lives here." },
+  { term: "Great Red Spot", def: "A storm on Jupiter wider than Earth, observed for at least 190 years." },
+  { term: "Europa", def: "A moon of Jupiter with an ice shell over a salty ocean, a leading place to look for life." }
+];
+
+/* ---------- Helpers ---------- */
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+function shuffled(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ---------- Quiz component ---------- */
+function createQuiz(root, config) {
+  const BEST_KEY = "quizbench:best:" + config.title;
+  let order, i, picks;
+
+  function start() {
+    order = config.shuffle ? shuffled(config.questions) : config.questions.slice();
+    i = 0; picks = [];
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const item = order[i];
+    const total = order.length;
+    root.innerHTML = `
+      <div class="panel-head"><h2>${esc(config.title)}</h2><span class="chip">${total} questions</span></div>
+      <div class="q-meta label"><span>Question ${i + 1} of ${total}</span><span>Score ${score()}</span></div>
+      <div class="progress" role="progressbar" aria-valuenow="${i}" aria-valuemin="0" aria-valuemax="${total}"><span style="width:${(i / total) * 100}%"></span></div>
+      <p class="q-text">${esc(item.q)}</p>
+      <div class="choices">${item.choices.map((c, n) => `
+        <button class="choice" type="button" data-n="${n}"><span class="key">${n + 1}</span><span>${esc(c)}</span><span class="verdict"></span></button>`).join("")}
+      </div>
+      <div class="explain" hidden></div>
+      <div class="row"><button class="btn btn-primary" type="button" data-next disabled>${i + 1 === total ? "See results" : "Next question"}</button>
+      <span class="hint">Keys <kbd>1</kbd>–<kbd>${item.choices.length}</kbd> to answer, <kbd>Enter</kbd> to continue</span></div>`;
+    root.querySelectorAll(".choice").forEach(b => b.addEventListener("click", () => choose(+b.dataset.n)));
+    $("[data-next]", root).addEventListener("click", next);
+  }
+
+  function choose(n) {
+    if (picks[i] !== undefined) return;
+    const item = order[i];
+    picks[i] = n;
+    root.querySelectorAll(".choice").forEach((b, k) => {
+      b.disabled = true;
+      if (k === item.answer) { b.classList.add("is-correct"); $(".verdict", b).textContent = "Correct"; }
+      else if (k === n) { b.classList.add("is-wrong"); $(".verdict", b).textContent = "Your pick"; }
+      else b.classList.add("is-dim");
+    });
+    const ex = $(".explain", root);
+    ex.innerHTML = `<strong>${n === item.answer ? "Right." : "Not quite."}</strong> ${esc(item.explain || "")}`;
+    ex.hidden = false;
+    $(".q-meta span:last-child", root).textContent = "Score " + score();
+    const btn = $("[data-next]", root);
+    btn.disabled = false; btn.focus();
+  }
+
+  function next() {
+    if (picks[i] === undefined) return;
+    i++;
+    i < order.length ? renderQuestion() : renderResult();
+  }
+
+  function score() { return picks.filter((p, k) => p === order[k].answer).length; }
+
+  function renderResult() {
+    const s = score(), total = order.length;
+    const prev = store.get(BEST_KEY);
+    const isBest = prev === null || s > prev;
+    if (isBest) store.set(BEST_KEY, s);
+    const best = isBest ? s : prev;
+    const verdict = s === total ? "Perfect run." : s >= total * 0.6 ? "Solid. Review the misses below." : "Worth another go.";
+    root.innerHTML = `
+      <div class="panel-head"><h2>${esc(config.title)}</h2>${isBest && prev !== null ? '<span class="chip chip-accent">New best</span>' : `<span class="chip">Best ${best} / ${total}</span>`}</div>
+      <div class="result">
+        <div class="score"><b>${s}</b><span>of ${total} correct · ${verdict}</span></div>
+        <div class="progress"><span style="width:${(s / total) * 100}%"></span></div>
+        <ul class="review">${order.map((q, k) => {
+          const ok = picks[k] === q.answer;
+          return `<li><span class="chip ${ok ? "chip-good" : "chip-bad"}">${ok ? "Right" : "Miss"}</span><span>${esc(q.q)}${ok ? "" : ` <span class="hint">Answer: ${esc(q.choices[q.answer])}</span>`}</span></li>`;
+        }).join("")}</ul>
+        <div class="row"><button class="btn btn-primary" type="button" data-restart>Try again</button></div>
+      </div>`;
+    $("[data-restart]", root).addEventListener("click", start);
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.target.closest("input, textarea") || !order || i >= order.length) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= order[i].choices.length) choose(n - 1);
+    else if (e.key === "Enter" && picks[i] !== undefined && document.activeElement?.dataset.next === undefined) next();
+  });
+
+  start();
+}
+
+/* ---------- Flashcard component ---------- */
+function createFlashcards(cards) {
+  let deck = cards.slice(), k = 0;
+  const card = $("#fc-card");
+  function render() {
+    card.classList.remove("is-flipped");
+    $("#fc-term").textContent = deck[k].term;
+    $("#fc-def").textContent = deck[k].def;
+    $("#fc-count").textContent = `${k + 1} / ${deck.length}`;
+  }
+  card.addEventListener("click", () => card.classList.toggle("is-flipped"));
+  $("#fc-prev").addEventListener("click", () => { k = (k - 1 + deck.length) % deck.length; render(); });
+  $("#fc-next").addEventListener("click", () => { k = (k + 1) % deck.length; render(); });
+  $("#fc-shuffle").addEventListener("click", () => { deck = shuffled(deck); k = 0; render(); });
+  render();
+}
+
+/* ---------- Short answer demo ---------- */
+$("#sa-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("#sa-input").value.trim().toLowerCase();
+  const out = $("#sa-out");
+  if (!v) { out.textContent = "Type an answer first."; out.className = "hint"; return; }
+  const ok = v.includes("proxima");
+  out.innerHTML = ok ? '<span class="chip chip-good">Correct</span> Proxima Centauri, about 4.24 light-years away.'
+                     : '<span class="chip chip-bad">Wrong</span> It is Proxima Centauri, about 4.24 light-years away.';
+});
+$("#sa-out").textContent = "Answer is checked when you press Check.";
+
+/* ---------- Copy button ---------- */
+$("#copy-btn").addEventListener("click", () => {
+  const btn = $("#copy-btn");
+  const text = $("#code-sample").innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = "Copied";
+    setTimeout(() => (btn.textContent = "Copy"), 1500);
+  }).catch(() => {
+    const r = document.createRange(); r.selectNodeContents($("#code-sample"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    btn.textContent = "Press ⌘C / Ctrl+C";
+  });
+});
+
+createQuiz($("#quiz"), QUIZ);
+createFlashcards(CARDS);
+</script>
+</body>
+</html>
